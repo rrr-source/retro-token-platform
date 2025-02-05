@@ -1,0 +1,175 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --neon-pink: #ff71ce;
+  --neon-blue: #01cdfe;
+  --neon-purple: #b967ff;
+  --dark-bg: #000000;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  height: 100%;
+  background-color: black;
+}
+
+body {
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Wallet Adapter Custom Styles */
+.wallet-adapter-button {
+  @apply bg-neon-purple border-2 border-white text-white px-6 py-3 uppercase cursor-pointer 
+         transition-all duration-300 relative overflow-hidden font-press-start text-xs
+         hover:bg-neon-pink hover:-translate-y-0.5 hover:shadow-[0_0_15px_theme(colors.neon-pink)]
+         active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed
+         rounded-lg !important;
+  background: none !important;
+  height: auto !important;
+  line-height: normal !important;
+}
+
+.wallet-adapter-button-trigger {
+  background: none !important;
+}
+
+.wallet-adapter-modal-wrapper {
+  @apply bg-black/95 backdrop-blur-md border-2 border-neon-purple !important;
+}
+
+.wallet-adapter-modal-button-close {
+  @apply bg-neon-purple text-white !important;
+}
+
+.wallet-adapter-modal-title {
+  @apply font-press-start text-neon-pink !important;
+}
+
+.wallet-adapter-modal-content {
+  @apply text-white !important;
+}
+
+.wallet-adapter-modal-list {
+  @apply space-y-2 !important;
+}
+
+.wallet-adapter-modal-list li {
+  @apply bg-black/40 border-2 border-neon-purple rounded-lg transition-colors !important;
+}
+
+.wallet-adapter-modal-list li:hover {
+  @apply border-neon-pink !important;
+}
+
+.wallet-adapter-modal-list-more {
+  @apply text-neon-purple hover:text-neon-pink !important;
+}
+
+.wallet-adapter-dropdown {
+  @apply w-full !important;
+}
+
+.wallet-adapter-button-start-icon {
+  @apply hidden !important;
+}
+
+@layer base {
+  body {
+    @apply bg-black text-white font-press-start;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-black;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-neon-purple/50 rounded-full hover:bg-neon-purple/70 transition-colors;
+  }
+}
+
+@layer components {
+  .retro-button {
+    @apply bg-neon-purple border-2 border-white text-white px-6 py-3 uppercase cursor-pointer 
+           transition-all duration-300 relative overflow-hidden font-press-start text-xs
+           hover:bg-neon-pink hover:-translate-y-0.5 hover:shadow-[0_0_15px_theme(colors.neon-pink)]
+           active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed
+           rounded-lg;
+  }
+
+  .neon-text {
+    text-shadow: 0 0 5px theme('colors.neon-purple'),
+                 0 0 10px theme('colors.neon-purple'),
+                 0 0 20px theme('colors.neon-purple');
+    @apply animate-flicker;
+  }
+
+  .grid-background {
+    @apply fixed inset-0 pointer-events-none;
+    background-image: 
+      linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+    transform: perspective(500px) rotateX(60deg);
+    z-index: -1;
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 768px) {
+    .retro-button {
+      @apply px-4 py-2 text-[10px];
+    }
+
+    .neon-text {
+      text-shadow: 0 0 3px theme('colors.neon-purple'),
+                   0 0 6px theme('colors.neon-purple'),
+                   0 0 12px theme('colors.neon-purple');
+    }
+
+    .grid-background {
+      background-size: 30px 30px;
+    }
+  }
+}
+
+@keyframes flicker {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+    text-shadow: 0 0 5px theme('colors.neon-purple'),
+                 0 0 10px theme('colors.neon-purple'),
+                 0 0 20px theme('colors.neon-purple');
+  }
+  20%, 24%, 55% {
+    text-shadow: none;
+  }
+}
+
+/* Prevent text selection on interactive elements */
+button, a {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
