@@ -12,6 +12,7 @@ import Dashboard from './components/Dashboard';
 import TokenDetails from './components/TokenDetails';
 import About from './components/About';
 import FAQ from './components/FAQ';
+import './index.css'
 
 const App = () => {
   const [isLoading, setIsLoading] = useState(true);
