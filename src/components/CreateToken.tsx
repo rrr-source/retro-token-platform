@@ -1,107 +1,20 @@
-// Full modified CreateToken.tsx
-
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, ArrowLeft, Clipboard, Check, ArrowUp } from '@phosphor-icons/react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '../contexts/WalletContext';
 import { WebBundlr } from '@bundlr-network/client';
-import BigNumber from 'bignumber.js';
-
-// ---------------------- UMI Imports ----------------------
 import { createUmi } from '@metaplex-foundation/umi-bundle-defaults';
-import { publicKey as umiPublicKey } from '@metaplex-foundation/umi';
-
 import { generateSigner, percentAmount, some } from '@metaplex-foundation/umi';
-
 import { web3JsRpc } from '@metaplex-foundation/umi-rpc-web3js';
 import { walletAdapterIdentity } from '@metaplex-foundation/umi-signer-wallet-adapters';
-import { createMetadataAccountV3 } from '@metaplex-foundation/mpl-token-metadata';
 import { mplTokenMetadata } from '@metaplex-foundation/mpl-token-metadata';
 import { mplToolbox } from '@metaplex-foundation/mpl-toolbox';
-// (defaultPlugins is included in the default bundle)
-import type { CreatorArgs } from '@metaplex-foundation/mpl-token-metadata';
-// --------------------------------------------------------
-import { createTokenIfMissing, mintTokensTo, findAssociatedTokenPda, getSplAssociatedTokenProgramId } from '@metaplex-foundation/mpl-toolbox';
 import { createFungible } from '@metaplex-foundation/mpl-token-metadata';
-import { createSignerFromKeypair, signerIdentity } from '@metaplex-foundation/umi';
-import { transactionBuilder } from '@metaplex-foundation/umi';
-
-import {
-  Connection,
-  clusterApiUrl,
-  Keypair,
-  PublicKey,
-  Transaction,
-  SystemProgram
-} from '@solana/web3.js';
-import { getOrCreateAssociatedTokenAccount, createMintToInstruction, createInitializeMintInstruction, MINT_SIZE, TOKEN_PROGRAM_ID } from '@solana/spl-token';
-
-/** The Metaplex Token Metadata Program ID. */
-const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
-  'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
-);
-
-/** Helper function to get the Metadata PDA for a given mint. */
-const getMetadataPDA = async (mint: PublicKey): Promise<PublicKey> => {
-  const [pda] = await PublicKey.findProgramAddress(
-    [
-      Buffer.from('metadata'),
-      TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-      mint.toBuffer(),
-    ],
-    TOKEN_METADATA_PROGRAM_ID
-  );
-  return pda;
-};
-
-/**
- * Pre-create a mint account using SPL Token instructions.
- * This builds a transaction that creates and initializes the mint account.
- * The payer (i.e. wallet's public key) is used as the mint authority.
- */
-const preCreateMint = async (
-  connection: Connection,
-  payerPubkey: PublicKey,
-  signTransaction: (tx: Transaction) => Promise<Transaction>
-) => {
-  const mintKey = Keypair.generate();
-  const lamports = await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
-  const tx = new Transaction();
-  tx.add(
-    SystemProgram.createAccount({
-      fromPubkey: payerPubkey,
-      newAccountPubkey: mintKey.publicKey,
-      lamports,
-      space: MINT_SIZE,
-      programId: TOKEN_PROGRAM_ID,
-    })
-  );
-  tx.add(
-    createInitializeMintInstruction(
-      mintKey.publicKey,
-      9, // decimals
-      payerPubkey, // mint authority is set to the wallet's public key
-      null // no freeze authority
-    )
-  );
-  tx.feePayer = payerPubkey;
-  const { blockhash } = await connection.getLatestBlockhash();
-  tx.recentBlockhash = blockhash;
-  // Partially sign with mintKey (which we generated in-app)
-  tx.partialSign(mintKey);
-  // Use the wallet adapter to sign the transaction
-  const signedTx = await signTransaction(tx);
-  const signature = await connection.sendRawTransaction(signedTx.serialize());
-  await connection.confirmTransaction(signature, 'confirmed');
-  console.log("Pre-created mint with public key:", mintKey.publicKey.toBase58());
-  return mintKey;
-};
+import { Connection, clusterApiUrl, PublicKey, Transaction } from '@solana/web3.js';
 
 const CreateToken = () => {
   const { publicKey, signTransaction, wallet, connected, connect } = useWallet();
-
-  // When the component mounts, try to connect the wallet if not connected.
   useEffect(() => {
     if (wallet && wallet.adapter && !wallet.adapter.connected) {
       connect().catch((err) =>
@@ -113,17 +26,13 @@ const CreateToken = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState<JSX.Element | string>('');
-  const [refresh, setRefresh] = useState<boolean>(false);
   const [showForm, setShowForm] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [mintAddress, setMintAddress] = useState<string | null>(null);
-
   const [tokenName, setTokenName] = useState('');
   const [tokenSymbol, setTokenSymbol] = useState('');
   const [description, setDescription] = useState('');
-  const [initialSupply, setInitialSupply] = useState(1000);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [mintKeypair, setMintKeypair] = useState<Keypair | null>(null);
+  const [_imageFile, setImageFile] = useState<File | null>(null); // For file upload (currently unused in mint logic)
+
 
   const handleCopy = () => {
     if (publicKey) {
@@ -143,7 +52,7 @@ const CreateToken = () => {
         ...wallet,
         publicKey,
         getPublicKey: () => publicKey,
-        sendTransaction: async (tx: Transaction, connection: Connection, options: any) => {
+        sendTransaction: async (tx: Transaction, connection: Connection) => {
           const signedTx = await signTransaction(tx);
           return connection.sendRawTransaction(signedTx.serialize());
         },
@@ -211,9 +120,6 @@ const CreateToken = () => {
     setTokenName('');
     setTokenSymbol('');
     setDescription('');
-    setInitialSupply(1000);
-    setImageFile(null);
-    setMintAddress(null);
     setShowForm(false);
     setSuccess('');
     setError('');
@@ -228,7 +134,7 @@ const CreateToken = () => {
         setError('Wallet connection failed.');
         return;
       }
-      if (!wallet.adapter.connected || wallet.adapter.readyState !== 'Connected' || !publicKey) {
+      if (!wallet.adapter.connected || !publicKey) {
         setError('Wallet not fully connected. Please try again.');
         return;
       }
@@ -238,10 +144,6 @@ const CreateToken = () => {
     setError('');
     setSuccess('');
     try {
-      const connection = new Connection(clusterApiUrl('devnet'), {
-        commitment: 'confirmed',
-        confirmTransactionInitialTimeout: 30000,
-      });
       // 1) Upload metadata to Arweave
       const metadata = {
         name: tokenName,
@@ -281,15 +183,13 @@ const CreateToken = () => {
       const mint = generateSigner(umi);
       const mintPublicKey = new PublicKey(mint.publicKey);
 
-      const createFungibleTx = await createFungible(umi, {
+      await createFungible(umi, {
         mint,
         name: tokenName,
         uri: metadataUri,
         sellerFeeBasisPoints: percentAmount(0),
         decimals: some(9),
       });
-      const result = await createFungibleTx.sendAndConfirm(umi);
-      setMintAddress(new PublicKey(mint.publicKey).toBase58());
 
       setSuccess(
         <div key={new Date().getTime()} className="flex flex-col items-center">
@@ -311,7 +211,6 @@ const CreateToken = () => {
       );
 
       setShowForm(false);
-      setRefresh(prev => !prev);
     } catch (err) {
       console.error("❌ [Mint Token] Error:", err);
       setError("❌ Transaction failed. Please try again.");
@@ -323,7 +222,7 @@ const CreateToken = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
-      setImageFile(e.target.files[0]);
+     setImageFile(e.target.files[0]);
     }
   };
 
@@ -343,7 +242,7 @@ const CreateToken = () => {
                 {typeof success === "string" ? (
                   <p className="text-green-500 text-sm font-press-start">{success}</p>
                 ) : (
-                  success
+                  <>{success}</>
                 )}
               </div>
             )}
